@@ -12,5 +12,6 @@ Students are expected to:
 Student Info
 =======================
 
-* Name: MyName
+* Name: Ngo The Tu
+* Student ID : M21.ICT.012
 
