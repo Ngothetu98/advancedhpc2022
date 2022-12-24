@@ -58,9 +58,7 @@ devOutput2 = cuda.device_array(np.shape(img2),np.uint8)
 
 @cuda.jit 
 def grayscale(src, dst): 
-  # where are we in the input? 
-  tidx = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x 
-  #g = np.uint8(src[tidx, 0]/3 + src[tidx, 1]/3 + src[tidx, 2]/ 3) 
+  tidx = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x  
   g = np.uint8((src[tidx, 0] + src[tidx, 1] + src[tidx, 2])/ 3) 
   dst[tidx, 0] = dst[tidx, 1] = dst[tidx, 2] = g
 
