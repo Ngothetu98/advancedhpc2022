@@ -24,49 +24,64 @@ import os.path
 from numba import cuda
 import time
 
-filename = ('/content/drive/MyDrive/M21.ICT.012_NgoTheTu.jpeg')
+imagefile = mpimg.imread('/content/drive/MyDrive/M21.ICT.012_NgoTheTu.jpeg')
+imgplot = plt.imshow(imagefile)
+plt.show()
 
-im = Image.open(filename)
-width, height = im.size
-im.close()
+height, width, count = imagefile.shape
+pixelCount = height*width
 
-hostInput = np.zeros((height, width, 3), np.uint8)
-devOutput = cuda.device_array((height, width, 3), np.uint8)
-devData = cuda.to_device(hostInput)
+img1 = imagefile.copy()
+img1 = img1.reshape(pixelCount, 3)
 
-pixelCount = width * height
-blockSize = 64
-gridSize  = pixelCount / blockSize
-
-img = mpimg.imread(filename)
-
-@cuda.jit
-def grayscale(src, dst):
-  tidx = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x
-  g = np.uint8((src[tidx, 0] + src[tidx, 1] + src[tidx, 2]) / 3)
-  dst[tidx, 0] = dst[tidx, 1] = dst[tidx, 2] = g
-
-#hostInput = np.zeros((height, width, 3),np.uint8)
-#devOutput = cuda.device_array((height, width, 3),np.uint8)
-
-flatten = img.flatten().reshape(pixelCount,3)
-# imgplot = plt.imshow(devInput)
-# plt.show()
+def gray_scale(img):
+  for i in img:
+    gray = i[0]/3 + i[1]/3 + i[2]/3
+    i[0] = gray
+    i[1] = gray
+    i[2] = gray
+  return img
 
 t1 = time.time()
-
-for i in flatten:
-  gray = ((i[0]+i[1]+[2])/3)
-  i[0], i[1], i[2] = gray, gray, gray
-
+img1 = gray_scale(img1)
+img1 = np.reshape(img1, (height,width,3))
 t2 = time.time()
 
-print(t2-t1)
-
-imgray1 = flatten.reshape(height, width, 3)
-
-imgpu = Image.fromarray(imgray1)
-imgpu.save("/content/drive/MyDrive/Colab Notebooks/Ngothetu_GPU.jpeg")
-
-imgplot = plt.imshow(imgray1)
+wait_time = t2-t1
+print(str(wait_time))
+imgplot = plt.imshow(img1)
 plt.show()
+
+img2 = imagefile.copy().reshape(pixelCount, 3)
+devdata2 = cuda.to_device(img2)
+devOutput2 = cuda.device_array(np.shape(img2),np.uint8)
+
+@cuda.jit 
+def grayscale(src, dst): 
+  # where are we in the input? 
+  tidx = cuda.threadIdx.x + cuda.blockIdx.x * cuda.blockDim.x 
+  #g = np.uint8(src[tidx, 0]/3 + src[tidx, 1]/3 + src[tidx, 2]/ 3) 
+  g = np.uint8((src[tidx, 0] + src[tidx, 1] + src[tidx, 2])/ 3) 
+  dst[tidx, 0] = dst[tidx, 1] = dst[tidx, 2] = g
+
+
+t3 = time.time()
+blockSize = 64
+gridSize = int(pixelCount / blockSize)
+grayscale[gridSize, blockSize](devdata2, devOutput2)
+t4 = time.time()
+
+wait_time = t4-t3
+reshape_img2 = devOutput2.copy_to_host().reshape(height,width,3)
+
+print(str(wait_time))
+imgplot = plt.imshow(reshape_img2)
+plt.show()
+
+im_gpu = Image.fromarray(reshape_img2)
+im_gpu.save("/content/drive/MyDrive/Colab Notebooks/Ngothetu_GPU.jpeg")
+
+
+#print(str(time_wait))
+#imgplot = plt.imshow(reshape_img2)
+#plt.show()
